@@ -1,0 +1,10 @@
+body{
+    font-family: Arial;
+}
+.input-grid,.todo-grid{
+    margin-bottom: 1em;
+    column-gap: 1em;
+    row-gap: 1em;
+    display: grid;
+    grid-template-columns: 200px 150px 100px;
+}

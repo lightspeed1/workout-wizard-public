@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercise Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    
+</head>
+
+
+<body>
+
+    <!-- <nav class="navbar navbar-expand-lg bg-dark mb-3 border-danger-subtle border-bottom border-3 shadow" data-bs-theme="dark">
+        <div class="container-fluid">
+            <a class="navbar-brand fs-3 fw-bold" href="#">Workout App</a>
+            <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbarCollapsedContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapsedContent">
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link active" href="/myworkouts">My Workouts</a>
+                    <a class="nav-link active" href="/doworkout">Do Workout</a>
+                </div>
+                
+                <div>
+                    <button class="btn btn-danger" onclick="console.log('log out')">Log out</button>
+                    <div class="d-inline-block d-none" id="logged-out-btns" >
+                        <button class="btn btn-light " onclick="console.log('log in');">Log in</button>
+                        <button class="btn btn-primary mx-1">Sign up</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav> -->
+    <span id="navbar-container"></span>
+    <script>
+        fetch("/navbar.html")
+        .then(result => result.text())
+        .then(htmlContent => {
+            document.querySelector("#navbar-container").innerHTML = htmlContent;
+            document.querySelector("#logged-out-btns").classList.add("d-none");
+        });
+    </script>
+    <!-- <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">Navbar</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <div class="navbar-nav me-auto mb-2 mb-lg-0">
+                <a class="nav-link active" aria-current="page" href="#">Home</a>
+                <a class="nav-link" href="#">Link</a>
+            </div>
+            <form class="d-flex" role="search">
+              <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+              <button class="btn btn-outline-success" type="submit">Search</button>
+            </form>
+          </div>
+        </div>
+      </nav> -->
+
+
+
+
+
+    <div id="all-workouts" class="container">
+        <div class="workouts-header d-flex justify-content-between align-items-center mb-1">
+            <div class="h1">My Workouts</div>
+            <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#newWorkoutModal"><span class="h4">New Workout</span></button>
+        </div>
+    </div>
+    <div class="modal fade" id="removeModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title">Remove Item</h1>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">Are you sure you want to remove <span id="removedItemName" class="fw-bold"></span>?</div>
+                    <button class="btn btn-danger" id="removeItemBtn" data-bs-dismiss="modal">Remove</button>
+                    <button class="btn btn-outline-dark" data-bs-dismiss="modal"> Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="newWorkoutModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title h2">Create New Workout</div>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-floating">
+                        <input class="form-control" id="workoutNameInput" placeholder="Enter New Workout Name">
+                        <label for="workoutNameInput">Workout Name</label>
+                        <div class="invalid-feedback">
+                            Name cannot be used.
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-success mt-2"  onclick="newWorkout(this.parentElement.querySelector('#workoutNameInput').value)">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="searchModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title">Add exercise</h1>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-0">
+                    </div class="container">
+                        <div id="js-textboxes" class="input-group">
+                            <btn id="js-submit" class="btn btn-success" style="display: flex; align-items: center;" onclick="searchClicked(0);">Search &#128269;</btn>
+                        </div>
+                        <div class="container" id="js-results-container">
+                    </div>
+                        <ul class="pagination mx-auto mt-3">
+                          <li class="page-item disabled" id="previous"><button class="page-link" onclick="searchClicked(-1);">Previous</button></li>
+                          <li class="page-item"><a class="page-link" id="page-num">0</a></li>
+                          <li class="page-item disabled" id="next"><button class="page-link" onclick="searchClicked(1);">Next</button></li>
+                        </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="infoModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title">Exercise Info</h1>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-0">
+                    <div class="container" id="info-modal-content">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/myworkouts.js"></script>
+</body>
+
+</html>
