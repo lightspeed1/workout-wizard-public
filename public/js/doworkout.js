@@ -1,35 +1,16 @@
-console.log("ASDASDASDASD");
+//This JS handles all code on the doworkout page, where a user executes a workout and fills out sets and reps textboxes for each exercise.
 
 let badgeMappings = {"beginner" : "success", "intermediate" : "warning", "expert" : "danger"};
 let currWorkout = "";
-let allWorkouts = {
-    "Full-body":[],
-    "Push":[{
-        "lastWorkout":{weight:[100], reps:[10]},
-        "name": "Dumbbell Bench Press",
-        "type": "strength",
-        "muscle": "chest",
-        "equipment": "dumbbell",
-        "difficulty": "intermediate",
-        "instructions": "Lie down on a flat bench with a dumbbell in each hand resting on top of your thighs. The palms of your hands will be facing each other. Then, using your thighs to help raise the dumbbells up, lift the dumbbells one at a time so that you can hold them in front of you at shoulder width. Once at shoulder width, rotate your wrists forward so that the palms of your hands are facing away from you. The dumbbells should be just to the sides of your chest, with your upper arm and forearm creating a 90 degree angle. Be sure to maintain full control of the dumbbells at all times. This will be your starting position. Then, as you breathe out, use your chest to push the dumbbells up. Lock your arms at the top of the lift and squeeze your chest, hold for a second and then begin coming down slowly. Tip: Ideally, lowering the weight should take about twice as long as raising it. Repeat the movement for the prescribed amount of repetitions of your training program.  Caution: When you are done, do not drop the dumbbells next to you as this is dangerous to your rotator cuff in your shoulders and others working out around you. Just lift your legs from the floor bending at the knees, twist your wrists so that the palms of your hands are facing each other and place the dumbbells on top of your thighs. When both dumbbells are touching your thighs simultaneously push your upper torso up (while pressing the dumbbells on your thighs) and also perform a slight kick forward with your legs (keeping the dumbbells on top of the thighs). By doing this combined movement, momentum will help you get back to a sitting position with both dumbbells still on top of your thighs. At this moment you can place the dumbbells on the floor. Variations: Another variation of this exercise is to perform it with the palms of the hands facing each other. Also, you can perform the exercise with the palms facing each other and then twisting the wrist as you lift the dumbbells so that at the top of the movement the palms are facing away from the body. I personally do not use this variation very often as it seems to be hard on my shoulders."
-    },
-    {
-        "name": "Incline Hammer Curls",
-        "type": "strength",
-        "muscle": "biceps",
-        "equipment": "dumbbell",
-        "difficulty": "beginner",
-        "instructions": "Seat yourself on an incline bench with a dumbbell in each hand. You should pressed firmly against he back with your feet together. Allow the dumbbells to hang straight down at your side, holding them with a neutral grip. This will be your starting position. Initiate the movement by flexing at the elbow, attempting to keep the upper arm stationary. Continue to the top of the movement and pause, then slowly return to the start position."
-      }]
-};
+let allWorkouts = {};
 
-// allWorkouts = JSON.parse(localStorage.getItem("allWorkouts"));
+//defining query selector shorthands
 const $ = (q) => document.querySelector(q);
 const $$ = (q) => document.querySelectorAll(q);
 let dropdownElement = $("#chooseWorkoutDropdown");
 let startButton = $("#startButton");
-// let dropdownButton = document.querySelector("#workoutChoice");
 let outerDiv = $("#outerDiv");
+
 
 function checkWorkoutValue()
 {
@@ -39,17 +20,15 @@ function checkWorkoutValue()
         startButton.removeAttribute("disabled");
 }
 
+//Creates Bootstrap card for workout information and fields (sets and reps for each exercise)
 function createWorkoutDropdown()
 {
     let currHTML = "";
-    console.log(allWorkouts);
     for(workout in allWorkouts)
     {
         let disabled = (allWorkouts[workout].length == 0) ? 'disabled' : '';
         currHTML += `<option value="${workout}" ${disabled}>${workout}</option>`;
-        //`<li><a class="dropdown-item ${disabled} " onclick="dropdownButton.innerHTML = '${workout}'" >${workout}</a></li>`;
     }
-    console.log(dropdownElement, currHTML);
     dropdownElement.insertAdjacentHTML("beforeend", currHTML);
 }
 
@@ -94,13 +73,15 @@ function setInfoModal(exerciseObj)
 {
     let exerciseCard = createExerciseInfoCard(exerciseObj, false);
     let infoModalContent = document.querySelector("#info-modal-content");
-    console.log(document.querySelector("#info-modal-content"));
     infoModalContent.innerHTML = exerciseCard;
     return;
 }
 
+
+//Creates special Bootstrap HTML for exercises in the current workout being done
 function createActiveExerciseCard(exerciseObj)
 {
+    //Create table which then goes inside Bootstrap card
     let tableHTML = `
     <div class="workout-table">
         <hr>
@@ -120,6 +101,7 @@ function createActiveExerciseCard(exerciseObj)
     if(exerciseObj.lastWorkout.weight.length > 0)
     {
         let tableEntries = "";
+        //Each set gets an entry in the table
         for(let j = 0; j < exerciseObj.lastWorkout.weight.length; j++)
         {
             tableEntries += 
@@ -162,7 +144,7 @@ function createActiveExerciseCard(exerciseObj)
 }
 
 
-
+//Saves new sets and reps information for each exercise in the active workout.
 async function storeAllWorkouts()
 {
     let bodyJson = JSON.stringify(allWorkouts);
@@ -186,6 +168,7 @@ function finishWorkout()
     yesBtn.classList.remove("btn-danger");
     yesBtn.classList.add("btn-success");
 
+    //"Yes" button needs extra functionality to save the workout info in the database
     yesBtn.onclick = async () =>
     {
         let names = $$(".exerciseName");
@@ -195,30 +178,16 @@ function finishWorkout()
             let exerciseObj = allWorkouts[currWorkout].find(x => x.name == names[i].innerHTML);
             let rows = Array.from(tables[i].children);
             exerciseObj.lastWorkout = {weight:[], reps:[]};
-            console.log("ROWS", rows);
             for(let j = 0; j < rows.length; j++)
             {
                 let cols = rows[j].children;
                 exerciseObj.lastWorkout.weight.push(cols[1].children[0].value);
                 exerciseObj.lastWorkout.reps.push(cols[2].children[0].value);
             }
-            // exerciseObj.lastWorkout = rows.map((row) => {
-            //     return {
-            //         set: cols[0].innerHTML, 
-            //         weight: cols[1].children[0].value,
-            //         reps: cols[2].children[0].value
-            //     }
-            // });
-            console.log(exerciseObj.lastWorkout);
         }
-        console.log(allWorkouts);
-        // localStorage.setItem("allWorkouts", JSON.stringify(allWorkouts));
         await storeAllWorkouts();
         window.location.pathname = "/myworkouts";
     } 
-    // console.log(JSON.parse(localStorage.getItem("hello")));
-    // localStorage.setItem("hello", JSON.stringify([1,2,3]));
-    
 }
 
 function cancelWorkout()
@@ -236,12 +205,12 @@ function cancelWorkout()
     }
 }
 
+//Add a set to an exercise. Maximum 10 sets allowed per exercise to avoid bloat.
 function addSet(exerciseName, addSetBtn)
 {
     let exerciseTable = document.querySelector(`.${exerciseName.replace(/ /g, "-")}-card`).querySelector(".table-entries");
     let setNum = 1;
     let numRows = exerciseTable.children.length;
-    console.log(numRows);
     if(numRows > 0)
     {
         setNum = Number(exerciseTable.children[numRows - 1].children[0].innerHTML) + 1;
@@ -251,11 +220,14 @@ function addSet(exerciseName, addSetBtn)
     <td><input type="number" class='form-control weight' value='${0}'></td>
     <td><input type="number" class='form-control reps' value='${0}'></td>
     </tr>`);
+
+    //Max 10 sets
     if(setNum >= 10)
     {
         addSetBtn.setAttribute("disabled", "true");
     }
 }
+
 function removeSet(exerciseName, removeSetBtn)
 {
     let exerciseTable = document.querySelector(`.${exerciseName.replace(/ /g, "-")}-card`).querySelector(".table-entries");
@@ -271,6 +243,7 @@ function removeSet(exerciseName, removeSetBtn)
     }
 }
 
+//Creates Bootstrap HTML for a whole workout and adds it to the webpage
 function startWorkout()
 {
     currWorkout = dropdownElement.value;
@@ -287,10 +260,10 @@ function startWorkout()
         <button class="btn btn-success my-3 mx-auto d-block fs-5" onclick="finishWorkout();" data-bs-toggle="modal" data-bs-target="#endModal">Finish Workout</button>
         <button class="btn btn-danger mx-auto d-block fs-5" onclick="cancelWorkout();" data-bs-toggle="modal" data-bs-target="#endModal">Cancel Workout</button>`;
 
-
-
     outerDiv.innerHTML = currHTML;
 }
+
+//Send request to server to get all workouts the user has saved
 async function getWorkouts()
 {
     let result = await fetch("/getuserworkouts", {
@@ -300,7 +273,6 @@ async function getWorkouts()
         },
     });
     allWorkouts = await result.json();
-    console.log("ALL", allWorkouts);
 }
 async function initDoWorkoutPage()
 {

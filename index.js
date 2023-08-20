@@ -4,24 +4,19 @@ const pg = require('pg');
 
 const fs = require('fs');
 
-// const client = new pg.Client({
-//     host: 'localhost',
-//     port: 5432,
-//     database: 'workoutdb',
-//     user: 'postgres',
-//     password: '2323'
-// });
+//connect to postgres database
 
 const client = new pg.Client({
     host: 'HOST',
     port: 9999,
     database: 'DATABASE',
     user: 'USER',
-    password: 'PASSWORD',
-    ssl: true
+    password: 'PASSWORD'
 });
 
 
+
+//After connecting, create postgres tables for users and exercises if they don't already exist
 client.connect((e) =>
 {
     if(e)
@@ -61,6 +56,8 @@ app.use(express.static(path.join(__dirname, "/public")));
 
 app.use(express.json());
 
+
+//extract a cookie from the large cookie string sent by the client
 function getCookie(headers, cookieName)
 {
     let cookiesString = headers.cookie;
@@ -73,15 +70,17 @@ function getCookie(headers, cookieName)
     return cookiesString.substring(cutoff).split(";")[0];
 }
 
-let emails = ["guy@guy.com"];
-let passwords = ["guyrocks23@"];
 const expireObject = {expires: new Date("9999-9-9")};
 
+
+//homepage
 app.get("/", (req, res) => {
     console.log(__dirname);
     res.sendFile(path.join(__dirname, "index.html"));
 });
 
+
+//If user goes to signup page, redirect them to the workouts page if they are logged in otherwise let them go
 app.get("/signup", async (req, res) => {
     let userEmail = decodeURIComponent(getCookie(req.headers, "email"));
     if(userEmail !== "")
@@ -89,10 +88,10 @@ app.get("/signup", async (req, res) => {
     else
         res.sendFile(path.join(__dirname, "/signup.html"));
     
-    
 });
 
 
+//Create random string for session cookie
 function randomString()
 {
     let len = 70;
@@ -106,11 +105,11 @@ function randomString()
     return randStr;
 }
 
+//Create a session cookie, which verifies that the user is who they say they are.
 async function createSessionCookie(response, userInfo)
 {
     let sessionCookieStr = randomString();
     response.cookie("login_session", sessionCookieStr, expireObject);
-    console.log("COOKIE: ", sessionCookieStr);
     try 
     {
         await client.query("UPDATE users SET login_session = $1 WHERE email = $2;", [sessionCookieStr, userInfo.email]);
@@ -120,20 +119,18 @@ async function createSessionCookie(response, userInfo)
     }
 }
 
+//Send the workouts page. redirect user to login page if they aren't logged in
 app.get("/myworkouts", (req, res) => {
-    console.log(req.headers.cookie);
     let userEmail = decodeURIComponent(getCookie(req.headers, "email"));
     if(userEmail == "")
     {
         res.redirect("/login");
         return;
     }
-    res.cookie("hello", "me");
-    res.cookie("yuh", "wow");
-    console.log("+" + getCookie(req.headers, "hello") + "+");
     res.sendFile(path.join(__dirname, "/myworkouts.html"));
 });
 
+//Send the do workout page. Redirect to login if user isn't logged in.
 app.get("/doworkout", (req, res) => {
     let userEmail = decodeURIComponent(getCookie(req.headers, "email"));
     if(userEmail == "")
@@ -144,8 +141,8 @@ app.get("/doworkout", (req, res) => {
     res.sendFile(path.join(__dirname, "/doworkout.html"));
 });
 
+//Endpoint to create an account with a username and password. Creates session cookie and sends it to user.
 app.post("/createaccount", async (req, res) => {
-    res.cookie("hello", "me");
     console.log("CREATING ACCOUNT");
     let user = req.body;
     try
@@ -163,8 +160,10 @@ app.post("/createaccount", async (req, res) => {
     res.status(200).send({message: "Successfuly created account."});
 });
 
+
+//endpoint that sends user login page, or redirects them to my workouts page if they are logged in
+//NOTE: this endpoint isn't responsible for actually logging in the user. /postloginendpoint does that.
 app.get("/login", async (req, res) => {
-    console.log("ASDASDASDASD", req.headers.cookie);
     let userEmail = decodeURIComponent(getCookie(req.headers, "email"));
     if(userEmail != "")
         res.redirect("/myworkouts");
@@ -173,22 +172,22 @@ app.get("/login", async (req, res) => {
     // res.end();
 });
 
+//log out the user
 app.get("/postlogout", (req, res) => {
     let userEmail = decodeURIComponent(getCookie(req.headers, "email"));
-    console.log("USER EMAIL1111: ", userEmail)
     client.query("UPDATE users SET login_session = '' WHERE email = $1;", [userEmail]);
     res.clearCookie("login_session");
     res.clearCookie("email");
     res.end();
 });
 
+//login the user and give their client a session cookie
 app.post("/postloginendpoint", async (req, res) => {
     let user = req.body;
     //first check already logged in. This could potentially be on a another device
     let queryResult = null;
     try 
     {
-        console.log(user.email);
         queryResult = await client.query("SELECT * FROM users WHERE email = $1;", [user.email]);
     }
     catch (err) 
@@ -214,6 +213,7 @@ app.post("/postloginendpoint", async (req, res) => {
     }
 });
 
+//update workout information (sets and reps for each exercise, also weight) when they complete a workout
 app.post("/updateworkouts", async (req, res) => {
     let allWorkouts = req.body;
     let sessionCookie = getCookie(req.headers, "login_session");
@@ -240,7 +240,6 @@ app.post("/updateworkouts", async (req, res) => {
             values.push(...Object.values(rest));
         }
     }
-    console.log("START LE QUERIES");
 
     if(values.length > 0)
     {
@@ -251,10 +250,11 @@ app.post("/updateworkouts", async (req, res) => {
 
     //then, add allWorkouts as json to the all_workouts field in the row corresponding to current user.
     await client.query("UPDATE users SET all_workouts = $1::jsonb WHERE email = $2 and login_session = $3;", [strObj, userEmail, sessionCookie]);
-    console.log("END LE QUERIES");
     res.sendStatus(200);
 });
 
+
+//get all workouts user has saved from postgres
 app.get("/getuserworkouts", async (req, res) => {
     //first query database for all_workouts of user
     let userEmail = decodeURIComponent(getCookie(req.headers, "email"));
@@ -270,13 +270,10 @@ app.get("/getuserworkouts", async (req, res) => {
         return;
     }
     let modedWorkoutsObj = user.all_workouts;
-    // console.log("MODED:, ", modedWorkoutsObj);
     let infoQuery = await client.query("select * from exercises where name in (select jsonb_array_elements(workouts.value)->'name'#>>'{}' from jsonb_each($1::jsonb) AS workouts);", [modedWorkoutsObj]);
     let exercisesArr = infoQuery.rows;
-    // console.log("ARR ", exercisesArr);
     let exercisesObj = {};
     exercisesArr.forEach(x => { exercisesObj[x.name] = x;});
-    // console.log("OBJ!!!", exercisesObj);
     for(key in modedWorkoutsObj)
     {
         curr = modedWorkoutsObj[key];
@@ -285,7 +282,6 @@ app.get("/getuserworkouts", async (req, res) => {
             curr[j] = {...exercisesObj[curr[j].name], lastWorkout : curr[j].lastWorkout};
         }
     }
-    console.log(modedWorkoutsObj);
     //now we return modedWorkoutsObj
     res.status(200).send(modedWorkoutsObj);
 });

@@ -3,20 +3,10 @@ const $ = (q) => document.querySelector(q);
 const $$ = (q) => document.querySelectorAll(q);
 let badgeMappings = {"beginner" : "success", "intermediate" : "warning", "expert" : "danger"};
 let currWorkout = "";
-let allWorkouts = {
-    "Full-body":[],
-    "Push":[{
-        "lastWorkout":{weight:[100], reps:[10]},
-        "name": "Dumbbell Bench Press",
-        "type": "strength",
-        "muscle": "chest",
-        "equipment": "dumbbell",
-        "difficulty": "intermediate",
-        "instructions": "Lie down on a flat bench with a dumbbell in each hand resting on top of your thighs. The palms of your hands will be facing each other. Then, using your thighs to help raise the dumbbells up, lift the dumbbells one at a time so that you can hold them in front of you at shoulder width. Once at shoulder width, rotate your wrists forward so that the palms of your hands are facing away from you. The dumbbells should be just to the sides of your chest, with your upper arm and forearm creating a 90 degree angle. Be sure to maintain full control of the dumbbells at all times. This will be your starting position. Then, as you breathe out, use your chest to push the dumbbells up. Lock your arms at the top of the lift and squeeze your chest, hold for a second and then begin coming down slowly. Tip: Ideally, lowering the weight should take about twice as long as raising it. Repeat the movement for the prescribed amount of repetitions of your training program.  Caution: When you are done, do not drop the dumbbells next to you as this is dangerous to your rotator cuff in your shoulders and others working out around you. Just lift your legs from the floor bending at the knees, twist your wrists so that the palms of your hands are facing each other and place the dumbbells on top of your thighs. When both dumbbells are touching your thighs simultaneously push your upper torso up (while pressing the dumbbells on your thighs) and also perform a slight kick forward with your legs (keeping the dumbbells on top of the thighs). By doing this combined movement, momentum will help you get back to a sitting position with both dumbbells still on top of your thighs. At this moment you can place the dumbbells on the floor. Variations: Another variation of this exercise is to perform it with the palms of the hands facing each other. Also, you can perform the exercise with the palms facing each other and then twisting the wrist as you lift the dumbbells so that at the top of the movement the palms are facing away from the body. I personally do not use this variation very often as it seems to be hard on my shoulders."
-    }]
-};
-// allWorkouts = JSON.parse(localStorage.getItem("allWorkouts"));
-// allWorkouts = {};
+let allWorkouts = {};
+
+
+//get all of user's workouts on postgres database on the server
 async function getWorkouts()
 {
     let result = await fetch("/getuserworkouts", {
@@ -38,21 +28,7 @@ let newWorkoutModal = document.querySelector("#newWorkoutModal");
 
 async function storeAllWorkouts()
 {
-    // localStorage.setItem("allWorkouts", JSON.stringify(allWorkouts));
-    
-    //first we create the modified allWorkouts object that only has workout names, exercise names, and weight and reps
-
-    // let modedObj = JSON.parse(JSON.stringify(allWorkouts));
-    // for(i in modedObj)
-    // {
-    //     let currWorkout = modedObj[i];
-    //     for(let j = 0; j < currWorkout.length; j++)
-    //         currWorkout[j] = {"name": currWorkout[j].name, "lastWorkout": currWorkout[j].lastWorkout};
-    // }
-    // console.log("MODED: ", modedObj);
-    // console.log("ALL", allWorkouts);
     let bodyJson = JSON.stringify(allWorkouts);
-    console.log("STORING");
     let response = await fetch("/updateworkouts", {
         method: "POST",
         headers:{
@@ -71,14 +47,12 @@ function newWorkout(workoutName) {
         return;
     }
     allWorkouts[workoutName] = [];
-    // workoutNameInput.value = "";
     let newCardHTML = createWorkoutCard(workoutName);
     let allWorkoutsContainer = document.querySelector("#all-workouts");
     allWorkoutsContainer.insertAdjacentHTML("beforeend", newCardHTML);
     let modalElement = document.querySelector("#newWorkoutModal");
     let modalInstance = bootstrap.Modal.getInstance(modalElement);
     modalInstance.hide();
-    console.log("NEWNEW");
     storeAllWorkouts();
 }
 
@@ -93,7 +67,7 @@ function removeWorkout(workoutName, workoutElementID)
     };
 }
 
-//
+//Adds an exercise to a workout. Also saves it in postgres
 function addExercise(workoutName, exerciseObj, addCard, buttonElement) {
     console.log("STARTING");
     if(buttonElement)
@@ -112,9 +86,8 @@ function addExercise(workoutName, exerciseObj, addCard, buttonElement) {
     }
     storeAllWorkouts();
 }
-// function removeExercise(workoutName, exerciseName) {
-//     allWorkouts[workoutName].splice(allWorkouts[workoutName].findIndex(obj => obj === exerciseName));
-// }
+
+//api key for sending requests to the API Ninjas exercises APi
 const apiKey = "KEY";
 //this function calls the exercises api with parameters for name, type, muscle, and difficulty
 async function getExercises(name, type, muscle, difficulty, offset)
@@ -138,6 +111,7 @@ function createUsedExerciseCard(exerciseObj)
     let collapseElementID = `${exerciseObj.name.replace(/ /g, "-")}-last-workout-table`;
     if(exerciseObj.lastWorkout.weight.length > 0)
     {
+        //For each exercise the sets, reps and weight from the last time you did the workout will appear in a table
         let tableEntries = "";
         for(let j = 0; j < exerciseObj.lastWorkout.weight.length; j++)
         {
@@ -166,6 +140,7 @@ function createUsedExerciseCard(exerciseObj)
             </div>
         </div>`;
     }
+    //add the table HTML to the rest of the card to complete a single exercise's HTML
     let currHTML = 
     `<div class="card card-body">
         <div class="hstack gap-2">
@@ -190,13 +165,12 @@ function setInfoModal(exerciseObj)
     infoModalContent.innerHTML = exerciseCard;
     return;
 }
-//removes an exercise object and html card associated with it
+//removes an exercise object and html card associated with it. Also sends this update to postgres
 function deleteExercise(buttonElement, workoutName, exerciseName)
 {
     let exerciseCard = buttonElement.parentElement.parentElement;
     document.querySelector("#removeItemBtn").onclick = function(e) {
         exerciseCard.remove();
-        // removeExercise(workoutName, exerciseName);
         allWorkouts[workoutName] = allWorkouts[workoutName].filter(obj => obj.name !== exerciseName);
         storeAllWorkouts();
     };
@@ -206,7 +180,7 @@ function deleteExercise(buttonElement, workoutName, exerciseName)
 //this function create html for exercises as they should appear under a workout and returns it as a string
 function createWorkoutCard(workoutName)
 {
-    //onclick="removeWorkout('${workoutName}', '#${boxId}')"
+    //create basic div to surround all workout info
     let boxId = `${workoutName}-workout-box`;
     let exerciseList = `
     <div id="${boxId}" >
@@ -218,6 +192,7 @@ function createWorkoutCard(workoutName)
         <div class="container" id="${workoutName}-exercises"> 
     `;
 
+    //create HTML for each exercise card and add each one to the outer workout div
     for(let i = 0; i < allWorkouts[workoutName].length; i++)
     {
         currWorkout = workoutName;
@@ -309,16 +284,13 @@ async function searchClicked(pageChoice)
     else if(pageChoice == 1)
         pageNum += 1;
     let queryOffset = (pageNum - 1) * 10;
-    console.log("SEARCHING");
     let results = await getExercises(searchTerms.nameValue, searchTerms.typeValue, searchTerms.muscleValue, searchTerms.difficultyValue, queryOffset);
-    console.log("RESULTS: ", results);
     //now insert the result json into the search result container
     let resultsContainer = document.querySelector("#js-results-container");
     resultsContainer.innerHTML = "";
     for(let i = 0; i < results.length; i++)
     {
         const r = results[i];
-        console.log(resultsContainer);
         resultsContainer.insertAdjacentHTML("beforeend", createExerciseInfoCard(r, true));
     }
 
@@ -335,7 +307,7 @@ async function searchClicked(pageChoice)
         $("#previous").classList.remove("disabled");
     }
     
-    //Filters the results of a dropdown based on user input
+//Filters the results of a dropdown based on user input
 function filterTextBox(myEvent)
 {
     const optionsElements = this.parentElement.querySelector(".js-options").children;
@@ -372,22 +344,23 @@ const allOptionsNames = ["muscle","type", "difficulty", "name"];
 
 let jsTextboxes = document.querySelector("#js-textboxes");
 
-
+//Create all HTML for how the page should initially be displayed
 async function initPage()
 {
     await getWorkouts();
-    console.log("DONE!!!");
     
+
     let allWorkoutsHTML = "";
     for(workoutName in allWorkouts)
     {
-        console.log("E")
         allWorkoutsHTML += createWorkoutCard(workoutName);
     }
     const allWorkoutsContainer = document.querySelector("#all-workouts");
     allWorkoutsContainer.insertAdjacentHTML("beforeend", allWorkoutsHTML);
 
     console.log(allWorkouts);
+
+    //set up the textbox used to name new workouts. Don't allow user to have two workouts of the same name or with workouts with empty names
     workoutNameInput.addEventListener("input", function(e)
     {
         let elt = e.target;
@@ -396,11 +369,13 @@ async function initPage()
         else
             elt.classList.remove("is-invalid");
     });
+    //reset textbox for new workout name when the modal containing it is closed
     newWorkoutModal.addEventListener("hide.bs.modal", function(e)
     {
         workoutNameInput.value = "";
     });
 
+    //add filtering to each of the workout search fields so that only options that have what the user is typing as a substring are displayed under each field.
     for(let i = 0; i < allOptions.length; i++)
     {
         let cName = allOptionsNames[i];
@@ -420,7 +395,6 @@ async function initPage()
 
         const currList = document.querySelector(`#${allOptionsNames[i]}-options`);
         const currInput = document.querySelector(`#${allOptionsNames[i]}-input`);
-        console.log(currInput);
         currInput.addEventListener("input", filterTextBox);
         for(let j = 0; j < allOptions[i].length; j++)
         {
@@ -428,6 +402,5 @@ async function initPage()
         }
     }
     const submitButton = document.querySelector("#js-submit");
-    // submitButton.addEventListener("click", searchClicked);
 }
 initPage();

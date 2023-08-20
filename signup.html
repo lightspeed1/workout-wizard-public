@@ -15,6 +15,7 @@
 
     <span id="navbar-container"></span>
     <script>
+        //get topbar code, hide the logout button.
         fetch("/navbar.html")
         .then(result => result.text())
         .then(htmlContent => {
@@ -37,9 +38,6 @@
             <div class="form-floating mt-2">
                 <input class="form-control js-password" type="password" placeholder="Password" pattern="(?=.*[0-9]{2,})(?=.*[!@#$%^&*])(?=.{8,16}).*" id="password-input" required>
                 <label for="password">Password</label>
-                <!-- <div class="invalid-feedback">
-                    Password must have 8-16 characters, at least 1 special character, and at least 2 numbers.
-                </div> -->
                 <div class=" mt-1  alert alert-light">
                     Password must contain:
                     <div class="text-danger  bi-x-circle-fill mt-1" id="length-requirement"> 8-16 charcters</div>
@@ -49,7 +47,6 @@
                 </div>
             </div>
             <button type="submit" class="btn btn-primary mt-2">Sign Up</button>
-            <!-- <button type="submit" formmethod="post" formaction="createaccount" class="btn btn-primary mt-2">Sign Up</button> -->
         </form>
     </div>
     <script>
@@ -57,10 +54,11 @@
         const $$ = (q) => document.querySelectorAll(q);
         const form = document.querySelector("form");
         form.addEventListener("submit", async (myEvent) => {
-            console.log(window.location);
+
             const passwordStr = document.querySelector(".js-password").value;
-            // const myRegex = /(?=.*[0-9]{2,})(?=.*[!@#$%^&*])(?=.{8,16})/;
             myEvent.preventDefault();
+
+            //first do basic checks (email must have an @, and characters before and after it, etc)
             if(!form.checkValidity())
             {
                 //fail
@@ -77,10 +75,7 @@
                     },
                     body: JSON.stringify(signupData)
                 });
-                console.log(response);
-                console.log(response.headers.get('Content-Type')); 
                 const jsonResponse = await response.json();
-                console.log(jsonResponse);
                 console.log("MADE REQUEST");
                 if(response.status == 400 && jsonResponse.message == "Email already registered.")
                 {
@@ -94,7 +89,6 @@
                 {
                     //email is unique
                     window.location.pathname = "/myworkouts";
-                    console.log(window.location);
                 }
             }
         });
@@ -104,17 +98,13 @@
             element.classList.remove(...removeList);
         }
 
+        //This event listener constantly checks to make sure the inputted password fulfilles requirements (length, numbers, and special chars)
         $("#password-input").addEventListener("input", (myEvent) => {
             const passwordStr = document.querySelector(".js-password").value;
-            console.log("INPUT");
             const regList = [/(?=^.{8,16}$)/, /(?=.*[0-9]{2,})/, /(?=.*[!@#$%^&*])/];
             const idList = ["#length-requirement", "#number-requirement", "#special-requirement"];
             for(let i = 0; i < regList.length; i++)
             {
-                if(i == 0)
-                {
-                    console.log(passwordStr.match(regList[i]));
-                }
                 if(passwordStr.match(regList[i]))
                     changeClasses($(idList[i]), ["text-success", "bi-check-circle-fill"], ["text-danger", "bi-x-circle-fill"]);
                 else

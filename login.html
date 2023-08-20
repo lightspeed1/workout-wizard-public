@@ -14,6 +14,7 @@
 <body>
     <span id="navbar-container"></span>
     <script>
+        //Get the topbar code. Hide the logout button.
         fetch("/navbar.html")
         .then(result => result.text())
         .then(htmlContent => {
@@ -63,7 +64,6 @@
 
             //post to server and check if email + password are valid
             myEvent.preventDefault();
-            // form.classList.add("was-validated");
             if(!form.checkValidity())
             {
                 //fail basic checks
@@ -82,6 +82,8 @@
                 });
                 let responseMessage = (await response.json()).message;
                 console.log(responseMessage);
+
+                //If there is an error from the server, either we are already logged in, or something else has happened, like the account hasn't been registered. 
                 if(response.status == 400)
                 {
                     if(responseMessage == "User is already logged in.")

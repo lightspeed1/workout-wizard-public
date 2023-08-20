@@ -15,6 +15,7 @@
 
     <span id="navbar-container"></span>
     <script>
+        //get navbar and hide login and signup, or log out buttons depending on whether or not the user is currently logged in
         fetch("/navbar.html")
         .then(result => result.text())
         .then(htmlContent => {
