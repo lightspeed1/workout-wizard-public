@@ -4,27 +4,25 @@ const pg = require('pg');
 
 const fs = require('fs');
 
-//connect to postgres database
 
-const client = new pg.Client({
-    host: 'HOST',
-    port: 9999,
-    database: 'DATABASE',
-    user: 'USER',
-    password: 'PASSWORD'
-});
-
-
-
-//After connecting, create postgres tables for users and exercises if they don't already exist
-client.connect((e) =>
+let pool = null;
+function connectToServer()
 {
-    if(e)
-    {
-        console.log("ERROR: client cannot connect ", e.stack);
-        return;
-    }
-    console.log("Successfully connected client.");
+    //actual postgres server info not shown for security
+    pool = new pg.Pool({
+        host: 'HOST',
+        port: 9999,
+        database: 'DATABASE',
+        user: 'USER',
+        password: 'PASSWORD',
+        ssl: true
+    });
+    
+
+    pool.on('error', (err, client) => {
+        console.error('Error in PostgreSQL pool:', err);
+    });
+    
     
     fs.readFile("create.sql", "utf8", (err1, createTableQuery) => {
         if(err1)
@@ -33,7 +31,7 @@ client.connect((e) =>
             return;
         }
         console.log("Read create.sql.");
-        client.query(createTableQuery, (err2, res) => {
+        pool.query(createTableQuery, (err2, res) => {
             if(err2)
             {
                 console.log("POSTGRES ERROR\n", err2.stack);
@@ -42,14 +40,14 @@ client.connect((e) =>
             console.log("Successfully executed create.sql.");
         });
     });
-});
+}
 
 
 const app = express();
 const path = require('path');
 const { create } = require('domain');
 const { execSync } = require('child_process');
-
+const { time } = require('console');
 
 
 app.use(express.static(path.join(__dirname, "/public")));
@@ -112,7 +110,7 @@ async function createSessionCookie(response, userInfo)
     response.cookie("login_session", sessionCookieStr, expireObject);
     try 
     {
-        await client.query("UPDATE users SET login_session = $1 WHERE email = $2;", [sessionCookieStr, userInfo.email]);
+        await pool.query("UPDATE users SET login_session = $1 WHERE email = $2;", [sessionCookieStr, userInfo.email]);
     } catch(err2) {
         console.log("POSTGRES ERROR, setting login cookie failed.\n", err2.stack);
         return;
@@ -147,7 +145,7 @@ app.post("/createaccount", async (req, res) => {
     let user = req.body;
     try
     {
-        await client.query("INSERT INTO users(id, email, password, all_workouts) VALUES(DEFAULT, $1, $2, '{}'::jsonb);", [user.email, user.password]);
+        await pool.query("INSERT INTO users(id, email, password, all_workouts) VALUES(DEFAULT, $1, $2, '{}'::jsonb);", [user.email, user.password]);
     }
     catch(err)
     {
@@ -175,7 +173,7 @@ app.get("/login", async (req, res) => {
 //log out the user
 app.get("/postlogout", (req, res) => {
     let userEmail = decodeURIComponent(getCookie(req.headers, "email"));
-    client.query("UPDATE users SET login_session = '' WHERE email = $1;", [userEmail]);
+    pool.query("UPDATE users SET login_session = '' WHERE email = $1;", [userEmail]);
     res.clearCookie("login_session");
     res.clearCookie("email");
     res.end();
@@ -188,7 +186,7 @@ app.post("/postloginendpoint", async (req, res) => {
     let queryResult = null;
     try 
     {
-        queryResult = await client.query("SELECT * FROM users WHERE email = $1;", [user.email]);
+        queryResult = await pool.query("SELECT * FROM users WHERE email = $1;", [user.email]);
     }
     catch (err) 
     {
@@ -243,13 +241,13 @@ app.post("/updateworkouts", async (req, res) => {
 
     if(values.length > 0)
     {
-        await client.query(`INSERT INTO exercises VALUES ${sub} ON CONFLICT DO NOTHING;`, values);
+        await pool.query(`INSERT INTO exercises VALUES ${sub} ON CONFLICT DO NOTHING;`, values);
     }
 
     let strObj = JSON.stringify(modedObj);
 
     //then, add allWorkouts as json to the all_workouts field in the row corresponding to current user.
-    await client.query("UPDATE users SET all_workouts = $1::jsonb WHERE email = $2 and login_session = $3;", [strObj, userEmail, sessionCookie]);
+    await pool.query("UPDATE users SET all_workouts = $1::jsonb WHERE email = $2 and login_session = $3;", [strObj, userEmail, sessionCookie]);
     res.sendStatus(200);
 });
 
@@ -261,7 +259,7 @@ app.get("/getuserworkouts", async (req, res) => {
     
     let sessionCookie = getCookie(req.headers, "login_session");
 
-    let namesQuery = await client.query("SELECT * FROM users WHERE email = $1", [userEmail]);
+    let namesQuery = await pool.query("SELECT * FROM users WHERE email = $1", [userEmail]);
     let user = namesQuery.rows[0];
 
     if(sessionCookie != user.login_session)
@@ -270,7 +268,7 @@ app.get("/getuserworkouts", async (req, res) => {
         return;
     }
     let modedWorkoutsObj = user.all_workouts;
-    let infoQuery = await client.query("select * from exercises where name in (select jsonb_array_elements(workouts.value)->'name'#>>'{}' from jsonb_each($1::jsonb) AS workouts);", [modedWorkoutsObj]);
+    let infoQuery = await pool.query("select * from exercises where name in (select jsonb_array_elements(workouts.value)->'name'#>>'{}' from jsonb_each($1::jsonb) AS workouts);", [modedWorkoutsObj]);
     let exercisesArr = infoQuery.rows;
     let exercisesObj = {};
     exercisesArr.forEach(x => { exercisesObj[x.name] = x;});
@@ -286,4 +284,6 @@ app.get("/getuserworkouts", async (req, res) => {
     res.status(200).send(modedWorkoutsObj);
 });
 
+connectToServer()
 app.listen(process.env.PORT || 3000, () => console.log("App available on http://localhost:3000"));
+console.log("PORT " + process.env.PORT)
