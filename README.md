@@ -1,6 +1,6 @@
 # Workout Wizard
 
-This is a workout tracker web app built with HTML, CSS, JavaScript, Bootstrap, PostgreSQL, and Vanilla (no frameworks) JS. Visit it [live now](https://workoutwizard.onrender.com/).
+This is a workout tracker web app built with HTML, CSS, Vanilla (no frameworks) JavaScript, Bootstrap, PostgreSQL. Visit it [live now](https://workoutwizard.onrender.com/).
 
 
 Notable Features:
